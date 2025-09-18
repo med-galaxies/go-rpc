@@ -14,9 +14,14 @@ type Header struct {
 type HeaderCodec interface {
 	ReaderHeader(*Header) error
 	ReaderBody(interface{}) error
-	Writer(*Header) error
+	Writer(*Header, interface{}) error
 	io.Closer
 }
+
+const (
+	HeaderCodecTypeGob  = "gob"
+	HeaderCodecTypeJson = "json"
+)
 
 type NewHeaderCodecFunc func(io.ReadWriteCloser) HeaderCodec
 
@@ -24,5 +29,5 @@ var NewHeaderCodecFuncMap map[string]NewHeaderCodecFunc
 
 func init() {
 	NewHeaderCodecFuncMap = make(map[string]NewHeaderCodecFunc)
-	NewHeaderCodecFuncMap["gob"] = NewGobHeaderCodec
+	NewHeaderCodecFuncMap[HeaderCodecTypeGob] = NewGobHeaderCodec
 }

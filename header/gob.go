@@ -21,8 +21,20 @@ func (c *GobHeaderCodec) ReaderBody(body interface{}) error {
 	return c.dec.Decode(body)
 }
 
-func (c *GobHeaderCodec) Writer(h *Header) error {
-	return c.enc.Encode(h)
+func (c *GobHeaderCodec) Writer(h *Header, body interface{}) (err error) {
+	defer func() {
+		c.buf.Flush()
+		if err != nil {
+			c.conn.Close()
+		}
+	}()
+	if err = c.enc.Encode(h); err != nil {
+		return err
+	}
+	if err = c.enc.Encode(body); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *GobHeaderCodec) Close() error {
