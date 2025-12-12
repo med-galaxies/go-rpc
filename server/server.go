@@ -23,6 +23,11 @@ var DefaultOption = &Option{
 	CodecType:       codec.GobType,
 }
 
+var TestOption = &Option{
+	MagicNumber: MagicNumber,
+	CodecType: codec.JsonType,
+}
+
 type Server struct {}
 
 func NewServer() *Server {
