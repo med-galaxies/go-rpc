@@ -51,7 +51,7 @@ func main() {
 	// defer func() { _ = client.Close() }()
 
 	time.Sleep(time.Second)
-	// send options
+
 	// _ = json.NewEncoder(conn).Encode(server.TestOption)
 
 	var wg sync.WaitGroup
