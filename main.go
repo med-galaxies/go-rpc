@@ -3,11 +3,15 @@ package main
 import (
 	"log"
 	"net"
+	"net/http"
 	"time"
 	"sync"
 	"gorpc/server"
 	"gorpc/client"
 	"context"
+	"os"
+	"syscall"
+	"os/signal"
 )
 
 type Foo int
@@ -25,13 +29,16 @@ func startServer(addr chan string) {
 		log.Fatal("register error:", err)
 	}
 	// pick a free port
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", ":9999")
 	if err != nil {
 		log.Fatal("network error:", err)
 	}
 	log.Println("start rpc server on", l.Addr())
+	server.HandleHTTP()
 	addr <- l.Addr().String()
-	server.DefaultServer.Accept(l)
+	// server.DefaultServer.Accept(l)
+	http.Serve(l, nil)
+	
 }
 
 func main() {
@@ -40,8 +47,8 @@ func main() {
 	go startServer(addr)
 
 	// in fact, following code is like a simple geerpc client
-	client, _ := client.Dial("tcp", <-addr)
-	defer func() { _ = client.Close() }()
+	client, _ := client.DialHTTP("tcp", <-addr)
+	// defer func() { _ = client.Close() }()
 
 	time.Sleep(time.Second)
 	// send options
@@ -62,4 +69,8 @@ func main() {
 		}(i)
 	}
 	wg.Wait()
+	quit := make(chan os.Signal, 1)
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+    <-quit
+    log.Println("Server shutting down...")
 }

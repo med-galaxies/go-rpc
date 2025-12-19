@@ -2,6 +2,7 @@ package server
 
 import (
 	"net"
+	"net/http"
 	"io"
 	"gorpc/codec"
 	"reflect"
@@ -14,7 +15,12 @@ import (
 	"strings"
 )
 
-const MagicNumber = 0x3bef5c
+const (
+	MagicNumber = 0x3bef5c
+	Connected = "200 Connected to Gorpc"
+	DefaultRPCPath = "/_gorpc_"
+	DefaultDebugPath = "/debug/gorpc"
+)
 
 type Option struct {
 	MagicNumber     int
@@ -44,6 +50,32 @@ var TestOption = &Option{
 
 type Server struct {
 	serviceMap sync.Map
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "CONNECT" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		io.WriteString(w, "405 must use CONNECT method")
+		return
+	}
+	conn, _, err := w.(http.Hijacker).Hijack()
+	if err != nil {
+		log.Print("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
+		return
+	}
+	io.WriteString(conn, "HTTP/1.0 "+Connected+"\n\n")
+	s.ServeConn(conn)
+}
+
+func (s *Server) HandleHTTP() {
+	http.Handle(DefaultRPCPath, s)
+	http.Handle(DefaultDebugPath, DebugHTTP{s})
+	log.Println("rpc server debug path:", DefaultDebugPath)
+}
+
+func HandleHTTP() {
+	DefaultServer.HandleHTTP()
 }
 
 func (s *Server) Register(rcvr interface{}) error {
