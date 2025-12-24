@@ -41,6 +41,9 @@ func startServer(addr chan string) {
 		log.Fatal("network error:", err)
 	}
 	log.Println("start rpc server on", l.Addr())
+
+	hl, _ := net.Listen("tcp", ":0")
+	log.Println("start http server on", hl.Addr())
 	// s.HandleHTTP()
 	// 创建独立的HTTP服务器
     mux := http.NewServeMux()
@@ -48,8 +51,10 @@ func startServer(addr chan string) {
 	mux.Handle(server.DefaultDebugPath, server.DebugHTTP{s})
 	addr <- l.Addr().String()
 	// server.DefaultServer.Accept(l)
-	// http.Serve(l, mux)
-	s.Accept(l)
+	// s.Accept
+	
+	go s.Accept(l)
+	go http.Serve(hl, mux)
 }
 
 func foo(xc *xclient.XClient, ctx context.Context, typ, serviceMethod string, args *Args) {
@@ -86,7 +91,7 @@ func call(addr1, addr2 string) {
 
 func broadcast(addr1, addr2 string) {
 	d := xclient.NewMultiServerDiscovery([]string{"tcp@" + addr1, "tcp@" + addr2}, []int{1, 2}, 100, 50)
-	xc := xclient.NewXClient(d, xclient.ConsistentHashSelect, nil)
+	xc := xclient.NewXClient(d, xclient.WeightRoundRobinSelect, nil)
 	defer func() { _ = xc.Close() }()
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
